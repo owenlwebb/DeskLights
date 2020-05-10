@@ -1,7 +1,7 @@
-Color:      __ __ __ 1e 
-Brightness: __ XX XX 2a
-Patterns:   __ XX XX 2c
-Speed:      __ XX XX 03
+0x __ __ __ 1e -> Color
+0x __ XX XX 2a -> Brightness
+0x __ XX XX 2c -> Patterns
+0x __ XX XX 03 -> Speed
 
 00ff00 # green
 ff0000 # red
