@@ -1,6 +1,6 @@
 #!/bin/bash
 
-address=$(cat lights.mac)
+address=$(jq -r ".mac" devices/lights.json)
 intensity=$(python3 -c "print(hex(round(($1/100)*255)))")
 
 CONNECT="connect $address"

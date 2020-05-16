@@ -1,6 +1,6 @@
 #!/bin/bash
 
-address=$(cat lights.mac)
+address=$(jq -r ".mac" devices/lights.json)
 data=$(python3 -c "print(' '.join('0x'+'$1'[i:i+2] for i in range(0,${#1},2)))")
 
 CONNECT="connect $address"
