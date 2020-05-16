@@ -1,2 +1,3 @@
-devices/*
 .vscode/*
+__pycache__/*
+devices/*
