@@ -1,59 +1,51 @@
-import os
+"""Simple proximity-based LED strip controller. Turn on/off based on RSSI of a 
+third device.
+
+    Author: Owen Webb
+    Date: 5/16/2020
+"""
+import json
 from collections import deque
 from statistics import median
-from subprocess import PIPE, Popen
 from time import sleep
 
-import pexpect
-
-# load addresses
-with open('phone.mac', 'r') as f1, open('lights.mac', 'r') as f2:
-    PHONE_ADDR = f1.read().strip()
-    LIGHTS_ADDR = f2.read().strip()
-PHONE_NAME = 'Pixel 2 XL'
+from BluetoothDevice import BluetoothDevice
 
 
-def connect(mac, name):
-    bt = pexpect.spawn('bluetoothctl')
-    failure = 1
-    while failure:
-        # print('Reconnecting...')
-        bt.send(f'connect {mac}\n'.encode())
-        failure = bt.expect([name.encode(), b'#'])
-        sleep(3)
-    bt.terminate()
+# Color codes for Lights
+OFF = '0000001e'
+WHITE = 'ffffff1e'
 
-
-def rssi(mac):
-    cmd = f'hcitool rssi {mac}'
-    out, err = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True).communicate()
-    return None if err else abs(int(out.split()[-1]))
+# Thresholds
+RSSI_THRESHOLD = 3
+RSSI_WINDOW = 8
 
 
 def main():
-    os.system('utility/write.sh 0000001e')
+    with open('devices/lights.json', 'r') as lightsf, \
+         open('devices/phone.json', 'r') as phonef:
+        lights_info = json.load(lightsf)
+        phone_info = json.load(phonef)
+
+    phone = BluetoothDevice(phone_info['mac'], phone_info['name'])
+    lights = BluetoothDevice(lights_info['mac'], lights_info['name'])
     LIGHTS_ON = False
     strengths = deque()
 
     while True:
-        rssi_val = rssi(PHONE_ADDR)
-        while rssi_val is not None:
-            # print(rssi_val)
-            strengths.append(rssi_val)
-            if len(strengths) == 6:
+        phone.connect()
+        while phone.is_connected():
+            strengths.append(phone.signal_strength())
+            if len(strengths) == RSSI_WINDOW:
                 strengths.popleft()
-
                 # set lights
-                if LIGHTS_ON and median(strengths) >= 3:
-                    os.system('utility/write.sh 0000001e')
+                if LIGHTS_ON and median(strengths) >= RSSI_THRESHOLD:
+                    lights.write(lights_info['attribute'], OFF)
                     LIGHTS_ON = False
-                elif not LIGHTS_ON and median(strengths) < 3:
-                    os.system('utility/write.sh ffffff1e')
+                elif not LIGHTS_ON and median(strengths) < RSSI_THRESHOLD:
+                    lights.write(lights_info['attribute'], WHITE)
                     LIGHTS_ON = True
-
             sleep(1)
-            rssi_val = rssi(PHONE_ADDR)
-        connect(PHONE_ADDR, PHONE_NAME)
 
 
 if __name__ == '__main__':
